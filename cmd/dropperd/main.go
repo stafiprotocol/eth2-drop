@@ -46,14 +46,13 @@ func _main() error {
 	logrus.Info("open wallet ok")
 	logrus.Info("dropper is running...")
 
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(time.Duration(cfg.TaskTicker) * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
 			newDaySeconds := utils.GetNewDayUtc8Seconds()
 			if newDaySeconds < cfg.DropTime {
-				fmt.Print("waiting droptime...")
 				continue
 			}
 			client, err := ethclient.Dial(cfg.EthApi)

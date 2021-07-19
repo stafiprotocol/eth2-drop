@@ -1,4 +1,5 @@
 logfilepath = ""
+taskticker = 600 # seconds
 ethapi = "https://ropsten.infura.io/v3/" 
 ledgerapi = "http://localhost:8082"
 chainid = 3
