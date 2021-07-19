@@ -6,11 +6,8 @@ import (
 	"drop/pkg/config"
 	"drop/pkg/log"
 	"drop/pkg/utils"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/big"
-	"net/http"
 	"os"
 	"runtime"
 	"runtime/debug"
@@ -25,6 +22,9 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/sirupsen/logrus"
 )
+
+const reTryLimit = 30
+const waitTime = time.Second * 10
 
 func _main() error {
 	cfg, err := config.Load("dropper_conf.toml")
@@ -60,10 +60,9 @@ func _main() error {
 				Context:     context.Background(),
 			}
 
-			//check date drop,skip if drop
+			//check date drop,skip if has drop
 			nowDate := utils.GetNowUTC8Date()
 			dateHash := crypto.Keccak256Hash([]byte(nowDate))
-
 			dateHasDrop, err := fisDropContract.DateDrop(&callOpts, dateHash)
 			if err != nil {
 				return err
@@ -71,7 +70,26 @@ func _main() error {
 			if dateHasDrop {
 				continue
 			}
+			//check dropflow, skip if no dropflow yesterday
+			retry := 0
+			dropFlowLatestDate := ""
+			for {
+				if retry > reTryLimit {
+					return fmt.Errorf("getDropFLowLatest  reach retry")
+				}
+				dropFlowLatestDate, err = getDropFLowLatest(cfg.LedgerApi)
+				if err != nil {
+					logrus.Warnf("getDropFLowLatest failed: %s", err)
+					time.Sleep(waitTime)
+					continue
+				}
+				break
+			}
+			if dropFlowLatestDate < utils.GetYesterdayUTC8Date() {
+				continue
+			}
 
+			//get claim state
 			claimOpen, err := fisDropContract.ClaimOpen(&callOpts)
 			if err != nil {
 				return err
@@ -117,10 +135,10 @@ func _main() error {
 					return err
 				}
 
-				//wait claim closed
+				//wait close claim tx onchain
 				retry := 0
 				for {
-					if retry > 20 {
+					if retry > reTryLimit {
 						return fmt.Errorf("check ClaimClose tx  reach retry")
 					}
 					_, isPending, err := client.TransactionByHash(context.Background(), tx.Hash())
@@ -128,15 +146,16 @@ func _main() error {
 						break
 					} else {
 						logrus.Warn("check CloseClaim tx failed ,watting...", " isPending ", isPending, " err ", err)
-						time.Sleep(15 * time.Second)
+						time.Sleep(waitTime)
 						retry++
 						continue
 					}
 				}
 
+				//wati claim close
 				retry = 0
 				for {
-					if retry > 20 {
+					if retry > reTryLimit {
 						return fmt.Errorf("check ClaimClose tx  reach retry")
 					}
 					open, err := fisDropContract.ClaimOpen(&callOpts)
@@ -144,65 +163,38 @@ func _main() error {
 						break
 					} else {
 						logrus.Warn("check ClaimOpen failed ,watting...", " err ", err)
-						time.Sleep(15 * time.Second)
+						time.Sleep(waitTime)
 						retry++
 						continue
 					}
 				}
 			}
 
-			//get new round root hash
-			retry := 0
+			//get root hash of new round
+			retry = 0
 			willUseRootHash := ""
 			for {
-				if retry > 20 {
+				if retry > reTryLimit {
 					return fmt.Errorf("get root hash  reach retry")
 				}
-				time.Sleep(10 * time.Second)
-				realUrl := fmt.Sprintf("%s/api/v1/root_hash?round=%d", cfg.LedgerApi, claimRoundOnchain.Int64()+1)
-				rsp, err := http.Get(realUrl)
+				willUseRootHash, err = getRootHash(cfg.LedgerApi, claimRoundOnchain.Int64()+1)
 				if err != nil {
-					logrus.Warnf("get root hash err %s", err)
+					logrus.Warnf("getRootHash failed: %s", err)
+					time.Sleep(waitTime * 2)
 					continue
 				}
-				if rsp.StatusCode != http.StatusOK {
-					logrus.Warnf("get root hash status: %d", rsp.StatusCode)
-					continue
-				}
-				rspBodyBts, err := ioutil.ReadAll(rsp.Body)
-				if err != nil {
-					logrus.Warnf("get root hash err %s", err)
-					continue
-				}
-				if len(rspBodyBts) <= 0 {
-					logrus.Warnf("get root hash err %s", fmt.Errorf("body zero err"))
-					continue
-				}
-				rspRootHash := RspRootHash{}
-				err = json.Unmarshal(rspBodyBts, &rspRootHash)
-				if err != nil {
-					logrus.Warnf("get root hash err %s", err)
-					continue
-				}
-				if rspRootHash.Status != "80000" {
-					logrus.Warnf("get root hash err %s", fmt.Errorf("status err:%s", rspRootHash.Status))
-					continue
-				}
-				willUseRootHash = rspRootHash.Data.RootHash
 				break
-
 			}
 
-			//set root hash
-
+			//send tx set root hash
 			tx, err := fisDropContract.SetMerkleRoot(txOpts, dateHash, common.HexToHash(willUseRootHash))
 			if err != nil {
 				return err
 			}
-			//wait root hash set
+			//wait root hash set tx onchain
 			retry = 0
 			for {
-				if retry > 20 {
+				if retry > reTryLimit {
 					return fmt.Errorf("check SetMerkleRoot tx  reach retry")
 				}
 				_, isPending, err := client.TransactionByHash(context.Background(), tx.Hash())
@@ -210,15 +202,16 @@ func _main() error {
 					break
 				} else {
 					logrus.Warn("check SetMerkleRoot tx failed ,watting...", " isPending ", isPending, " err ", err)
-					time.Sleep(15 * time.Second)
+					time.Sleep(waitTime)
 					retry++
 					continue
 				}
 			}
 
+			//wait date drop
 			retry = 0
 			for {
-				if retry > 20 {
+				if retry > reTryLimit {
 					return fmt.Errorf("check dateDrop  reach retry")
 				}
 				dateDrop, err := fisDropContract.DateDrop(&callOpts, dateHash)
@@ -226,7 +219,7 @@ func _main() error {
 					break
 				} else {
 					logrus.Warn("check dateDrop failed ,watting...", " err ", err)
-					time.Sleep(15 * time.Second)
+					time.Sleep(waitTime)
 					retry++
 					continue
 				}
@@ -254,12 +247,4 @@ func signTx(rawTx *types.Transaction, privateKeyBts []byte, chainId int64) (sign
 	signer := types.NewEIP155Signer(big.NewInt(chainId))
 	signedTx, err = types.SignTx(rawTx, signer, privKey.ToECDSA())
 	return
-}
-
-type RspRootHash struct {
-	Status  string `json:"status"`
-	Message string `json:"message"`
-	Data    struct {
-		RootHash string `json:"root_hash"`
-	} `json:"data"`
 }

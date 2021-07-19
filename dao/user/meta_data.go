@@ -5,9 +5,9 @@ import "drop/pkg/db"
 type MetaData struct {
 	db.BaseModel
 	DropRate           string `gorm:"type:varchar(30);not null;default:'0';column:drop_rate"`
-	DropFlowLatestDate string `gorm:"type:varchar(10);not null;default:'0';column:drop_flow_latest_date"`
-	LedgerLatestDate   string `gorm:"type:varchar(10);not null;default:'0';column:ledger_latest_date"`
-	LatestClaimRound   int64  `gorm:"type:bigint;unsigned;not null;column:latest_claim_round"`
+	DropFlowLatestDate string `gorm:"type:varchar(10);not null;default:'0';column:drop_flow_latest_date"`//latest date that has dropflow data
+	LedgerLatestDate   string `gorm:"type:varchar(10);not null;default:'0';column:ledger_latest_date"`//latest date apply to ledger, should <= DropFlowLatestDate
+	LatestClaimRound   int64  `gorm:"type:bigint;unsigned;not null;column:latest_claim_round"`//latest round
 }
 
 func UpOrInMetaData(db *db.WrapDb, c *MetaData) error {

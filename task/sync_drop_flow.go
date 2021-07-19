@@ -63,6 +63,7 @@ func SyncDropFlow(db *db.WrapDb, dropRate, rethStatApi string) error {
 			return fmt.Errorf("droprate:%s err :%s", dropRate, err)
 		}
 
+		//transaction start
 		tx := db.NewTransaction()
 		for _, l := range rspREth.Data.List {
 			if !common.IsHexAddress(l.Address) {

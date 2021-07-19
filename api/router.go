@@ -24,6 +24,7 @@ func InitRouters(db *db.WrapDb) http.Handler {
 	router.GET("api/v1/drop_rate", userHandler.HandleGetDropRate)
 	router.GET("api/v1/drop_info", userHandler.HandleGetDropInfo)
 	router.GET("api/v1/root_hash", userHandler.HandleGetRootHash)
+	router.GET("api/v1/drop_flow_latest", userHandler.HandleGetDropFlow)
 
 	return router
 }
