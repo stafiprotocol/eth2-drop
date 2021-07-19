@@ -6,9 +6,9 @@
 ```sh
 make build
 # after config dropper_conf.toml
-./dropperd
+./build/dropperd
 # after config ledger_conf.toml
-./ledgerd
+./build/ledgerd
 ```
 
 ## bind abi
