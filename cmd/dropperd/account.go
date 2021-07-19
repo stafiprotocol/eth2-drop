@@ -237,11 +237,18 @@ var cliFlags = []cli.Flag{
 	// config.ConfigFileFlag,
 	// config.VerbosityFlag,
 	config.KeystorePathFlag,
+	configPath,
 	// config.BlockstorePathFlag,
 	// config.FreshStartFlag,
 	// config.LatestBlockFlag,
 	// config.MetricsFlag,
 	// config.MetricsPort,
+}
+
+var configPath = &cli.StringFlag{
+	Name:  "C",
+	Usage: "Path to configfile",
+	Value: "dropper_conf.toml",
 }
 
 var generateFlags = []cli.Flag{
@@ -271,4 +278,3 @@ var accountCommand = cli.Command{
 		},
 	},
 }
-
