@@ -18,8 +18,9 @@ type Config struct {
 	DropContract  string
 	DropRate      string //decimal 18
 	DropTime      int64  //seconds from utc+8 00:00
-	Seed          string
 	SyncStartDate string
+	From          string
+	KeystorePath  string
 
 	ListenAddr  string
 	Mode        string //release debug test

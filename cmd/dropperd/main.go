@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"drop/contract/fis_drop"
 	"drop/pkg/config"
 	"drop/pkg/log"
@@ -13,14 +14,14 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/btcsuite/btcd/btcec"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/sirupsen/logrus"
+	"github.com/stafiprotocol/chainbridge/utils/crypto/secp256k1"
+	"github.com/stafiprotocol/chainbridge/utils/keystore"
 )
 
 const reTryLimit = 30
@@ -34,6 +35,15 @@ func _main() error {
 	}
 	log.InitLogFile(cfg.LogFilePath + "/dropper")
 	logrus.Infof("config info:%+v ", cfg)
+
+	kpI, err := keystore.KeypairFromAddress(cfg.From, keystore.EthChain, cfg.KeystorePath, false)
+	if err != nil {
+		return err
+	}
+	kp, ok := kpI.(*secp256k1.Keypair)
+	if !ok {
+		return fmt.Errorf("keypair failed")
+	}
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -112,17 +122,12 @@ func _main() error {
 			}
 
 			//txopts
-			privKeyBts, err := hexutil.Decode(cfg.Seed)
-			if err != nil {
-				return err
-			}
-			_, pubKey := btcec.PrivKeyFromBytes(btcec.S256(), privKeyBts)
-			from := crypto.PubkeyToAddress(*pubKey.ToECDSA())
 
+			from := kp.CommonAddress()
 			txOpts := &bind.TransactOpts{
 				From: from,
 				Signer: func(addr common.Address, tx *types.Transaction) (*types.Transaction, error) {
-					return signTx(tx, privKeyBts, cfg.ChainId)
+					return signTx(tx, kp.PrivateKey(), cfg.ChainId)
 				},
 				GasPrice: gasPrice,
 				Context:  context.Background(),
@@ -241,10 +246,9 @@ func main() {
 	}
 }
 
-func signTx(rawTx *types.Transaction, privateKeyBts []byte, chainId int64) (signedTx *types.Transaction, err error) {
-	privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), privateKeyBts)
+func signTx(rawTx *types.Transaction, prv *ecdsa.PrivateKey, chainId int64) (signedTx *types.Transaction, err error) {
 	// Sign the transaction and verify the sender to avoid hardware fault surprises
 	signer := types.NewEIP155Signer(big.NewInt(chainId))
-	signedTx, err = types.SignTx(rawTx, signer, privKey.ToECDSA())
+	signedTx, err = types.SignTx(rawTx, signer, prv)
 	return
 }

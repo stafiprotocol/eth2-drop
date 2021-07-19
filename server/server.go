@@ -23,7 +23,6 @@ type Server struct {
 	dropRate      string
 	dropTime      int64
 	chainId       int64
-	seed          string
 	syncStartDate string
 	db            *db.WrapDb
 }
@@ -39,7 +38,6 @@ func NewServer(cfg *config.Config, dao *db.WrapDb) (*Server, error) {
 		dropTime:      cfg.DropTime,
 		syncStartDate: cfg.SyncStartDate,
 
-		seed:    cfg.Seed,
 		chainId: cfg.ChainId,
 		db:      dao,
 	}

@@ -5,5 +5,6 @@ chainid = 3
 maxgasprice = 30 #GWEI
 dropcontract = "0xD55CF61f31E9407Ed5a31836E1E5ea26db7Bc17b"
 droptime = 600 # seconds
-seed = "0x0000"
+from = "0x0000"
+keystorepath = ""
 
