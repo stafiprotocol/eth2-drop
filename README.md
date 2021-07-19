@@ -11,6 +11,11 @@ make build
 ./build/ledgerd
 ```
 
+## gen keystore
+```sh
+./build/dropperd accounts geneth --keypath ./
+```
+
 ## bind abi
 
 ```sh

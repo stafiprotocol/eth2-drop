@@ -10,8 +10,6 @@ import (
 	"fmt"
 	"math/big"
 	"os"
-	"runtime"
-	"runtime/debug"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -22,6 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stafiprotocol/chainbridge/utils/crypto/secp256k1"
 	"github.com/stafiprotocol/chainbridge/utils/keystore"
+	"github.com/urfave/cli/v2"
 )
 
 const reTryLimit = 30
@@ -44,6 +43,8 @@ func _main() error {
 	if !ok {
 		return fmt.Errorf("keypair failed")
 	}
+	logrus.Info("open wallet ok")
+	logrus.Info("dropper is running...")
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -122,7 +123,6 @@ func _main() error {
 			}
 
 			//txopts
-
 			from := kp.CommonAddress()
 			txOpts := &bind.TransactOpts{
 				From: from,
@@ -236,19 +236,36 @@ func _main() error {
 	}
 }
 
-func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	debug.SetGCPercent(40)
-	err := _main()
-	if err != nil {
-		logrus.Error(err)
-		os.Exit(1)
-	}
-}
-
 func signTx(rawTx *types.Transaction, prv *ecdsa.PrivateKey, chainId int64) (signedTx *types.Transaction, err error) {
 	// Sign the transaction and verify the sender to avoid hardware fault surprises
 	signer := types.NewEIP155Signer(big.NewInt(chainId))
 	signedTx, err = types.SignTx(rawTx, signer, prv)
 	return
+}
+
+func main() {
+	if err := app.Run(os.Args); err != nil {
+		logrus.Error(err.Error())
+		os.Exit(1)
+	}
+}
+
+// init initializes CLI
+func init() {
+	app.Action = run
+	app.Copyright = "Copyright 2020 Stafi Protocol Authors"
+	app.Name = "dropperd"
+	app.Usage = "dropperd"
+	app.Authors = []*cli.Author{{Name: "Stafi Protocol 2021"}}
+	app.Version = "0.0.1"
+	app.EnableBashCompletion = true
+	app.Commands = []*cli.Command{
+		&accountCommand,
+	}
+
+	app.Flags = append(app.Flags, cliFlags...)
+}
+
+func run(ctx *cli.Context) error {
+	return _main()
 }
