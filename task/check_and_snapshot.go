@@ -39,6 +39,7 @@ func CheckAndSnapshot(db *db.WrapDb, ethApi, fisDropContractAddress string) erro
 	if err != nil {
 		return err
 	}
+	//skip if claimopen
 	if isClaimOpen {
 		return nil
 	}
@@ -51,6 +52,7 @@ func CheckAndSnapshot(db *db.WrapDb, ethApi, fisDropContractAddress string) erro
 	if err != nil {
 		return err
 	}
+	//skip if roundonchain != round in db
 	if roundOnchain.Int64() != meta.LatestClaimRound {
 		return nil
 	}
@@ -68,6 +70,10 @@ func CheckAndSnapshot(db *db.WrapDb, ethApi, fisDropContractAddress string) erro
 	tx := db.NewTransaction()
 	for i, l := range list {
 		time.Sleep(time.Millisecond * 200)
+		//skip if has claimed
+		if l.Claimed == 1 {
+			continue
+		}
 		isClaimed, err := fisDropContract.IsClaimed(&callOpts, big.NewInt(lastRound), big.NewInt(int64(i)))
 		if err != nil {
 			logrus.Warnf("fisDropContract.IsClaimed err:%s ,round:%d address:%s", err, lastRound, l.UserAddress)
@@ -89,11 +95,12 @@ func CheckAndSnapshot(db *db.WrapDb, ethApi, fisDropContractAddress string) erro
 				tx.RollbackTransaction()
 				panic(err)
 			}
+			//cal new total claimed
 			newTotalClaimedStr := oldTotalClaimed.Add(newClaimed).StringFixed(0)
 
+			//update db
 			dropLedger.TotalClaimedDropAmount = newTotalClaimedStr
 			l.Claimed = 1
-
 			err = dao_user.UpdateSnapshot(tx, l)
 			if err != nil {
 				tx.RollbackTransaction()
