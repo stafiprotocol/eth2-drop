@@ -20,7 +20,6 @@ func InitRouters(db *db.WrapDb) http.Handler {
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	userHandler := user_handlers.NewHandler(db)
-	// router.GET("api/v1/drop_list", userHandler.HandleGetDropList)
 	router.GET("api/v1/drop_rate", userHandler.HandleGetDropRate)
 	router.GET("api/v1/drop_info", userHandler.HandleGetDropInfo)
 	router.GET("api/v1/root_hash", userHandler.HandleGetRootHash)

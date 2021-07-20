@@ -61,6 +61,7 @@ func CheckAndSnapshot(db *db.WrapDb, ethApi, fisDropContractAddress string) erro
 		return err
 	}
 
+	//transaction start
 	tx := db.NewTransaction()
 	for i, l := range list {
 		time.Sleep(time.Millisecond * 200)
@@ -149,7 +150,7 @@ func CheckAndSnapshot(db *db.WrapDb, ethApi, fisDropContractAddress string) erro
 
 	err = tx.CommitTransaction()
 	if err != nil {
-		return err
+		panic(fmt.Errorf("tx.CommitTransaction err: %s", err))
 	}
 
 	return nil

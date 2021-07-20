@@ -68,12 +68,12 @@ func SyncDropFlow(db *db.WrapDb, dropRate, rethStatApi string) error {
 		for _, l := range rspREth.Data.List {
 			if !common.IsHexAddress(l.Address) {
 				tx.RollbackTransaction()
-				return fmt.Errorf("not common eth address: %s", l.Address)
+				panic(fmt.Errorf("not common eth address: %s", l.Address))
 			}
 			rethAmountDecimal, err := decimal.NewFromString(l.Amount)
 			if err != nil {
 				tx.RollbackTransaction()
-				return fmt.Errorf("reth amount not right: %s", l.Amount)
+				panic(fmt.Errorf("reth amount not right: %s", l.Amount))
 			}
 
 			dropAmountDecimal := rethAmountDecimal.Mul(dropRateDecimal).Div(decimal.New(1, 18))
@@ -100,7 +100,7 @@ func SyncDropFlow(db *db.WrapDb, dropRate, rethStatApi string) error {
 		}
 		err = tx.CommitTransaction()
 		if err != nil {
-			panic(err)
+			panic(fmt.Errorf("tx.CommitTransaction err: %s",err))
 		}
 
 	}

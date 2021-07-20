@@ -52,7 +52,7 @@ func IpRateLimiter() gin.HandlerFunc {
 		// Call the getVisitor function to retreive the rate limiter for
 		// the current user.
 		limiter := getVisitor(ip)
-		if limiter.Allow() == false {
+		if !limiter.Allow() {
 			c.AbortWithStatus(http.StatusTooManyRequests)
 		}
 		// 处理请求
@@ -63,11 +63,10 @@ func IpRateLimiter() gin.HandlerFunc {
 func MethodRateLimiter() gin.HandlerFunc {
 	globalRate := rate.NewLimiter(rate.Every(time.Minute), 10)
 	return func(c *gin.Context) {
-		if globalRate.Allow() == false {
+		if !globalRate.Allow() {
 			c.AbortWithStatus(http.StatusTooManyRequests)
 		}
 		// 处理请求
 		c.Next()
 	}
 }
-

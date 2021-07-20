@@ -76,7 +76,7 @@ func ApllyToLedger(db *db.WrapDb) error {
 		}
 		err = tx.CommitTransaction()
 		if err != nil {
-			panic(err)
+			panic(fmt.Errorf("tx.CommitTransaction err: %s",err))
 		}
 
 	}
