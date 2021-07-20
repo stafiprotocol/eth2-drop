@@ -8,6 +8,7 @@ import (
 	"drop/pkg/log"
 	"drop/pkg/utils"
 	"fmt"
+	"math"
 	"math/big"
 	"os"
 	"time"
@@ -23,7 +24,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const reTryLimit = 30
+const reTryLimit = math.MaxInt32
 const waitTime = time.Second * 10
 
 func _main() error {
@@ -55,14 +56,41 @@ func _main() error {
 			if newDaySeconds < cfg.DropTime {
 				continue
 			}
-			client, err := ethclient.Dial(cfg.EthApi)
-			if err != nil {
-				return err
+
+			//dial client
+			retry := 0
+			var client *ethclient.Client
+			for {
+				if retry > reTryLimit {
+					return fmt.Errorf("dial client reach retry")
+				}
+				client, err = ethclient.Dial(cfg.EthApi)
+				if err != nil {
+					logrus.Warn("dail client failed ,watting...", " err ", err)
+					time.Sleep(waitTime)
+					retry++
+					continue
+				}
+				break
 			}
-			fisDropContract, err := contract_fis_drop.NewFisDropREth(common.HexToAddress(cfg.DropContract), client)
-			if err != nil {
-				return err
+
+			//create fisDropContract
+			retry = 0
+			var fisDropContract *contract_fis_drop.FisDropREth
+			for {
+				if retry > reTryLimit {
+					return fmt.Errorf("NewFisDropREth reach retry")
+				}
+				fisDropContract, err = contract_fis_drop.NewFisDropREth(common.HexToAddress(cfg.DropContract), client)
+				if err != nil {
+					logrus.Warn("NewFisDropREth failed ,watting...", " err ", err)
+					time.Sleep(waitTime)
+					retry++
+					continue
+				}
+				break
 			}
+
 			callOpts := bind.CallOpts{
 				Pending:     false,
 				From:        [20]byte{},
@@ -73,15 +101,28 @@ func _main() error {
 			//check date drop,skip if has drop
 			nowDate := utils.GetNowUTC8Date()
 			dateHash := crypto.Keccak256Hash([]byte(nowDate))
-			dateHasDrop, err := fisDropContract.DateDrop(&callOpts, dateHash)
-			if err != nil {
-				return err
+
+			retry = 0
+			var dateHasDrop bool
+			for {
+				if retry > reTryLimit {
+					return fmt.Errorf("DateDrop reach retry")
+				}
+				dateHasDrop, err = fisDropContract.DateDrop(&callOpts, dateHash)
+				if err != nil {
+					logrus.Warn("DateDrop failed ,watting...", " err ", err)
+					time.Sleep(waitTime)
+					retry++
+					continue
+				}
+				break
 			}
 			if dateHasDrop {
 				continue
 			}
+
 			//check dropflow, skip if no dropflow yesterday
-			retry := 0
+			retry = 0
 			dropFlowLatestDate := ""
 			for {
 				if retry > reTryLimit {
@@ -99,23 +140,45 @@ func _main() error {
 				continue
 			}
 
-			//get claim state
-			claimOpen, err := fisDropContract.ClaimOpen(&callOpts)
-			if err != nil {
-				return err
+			//get claim open state
+			retry = 0
+			var claimOpen bool
+			for {
+				if retry > reTryLimit {
+					return fmt.Errorf("get ClaimOpen  reach retry")
+				}
+				claimOpen, err = fisDropContract.ClaimOpen(&callOpts)
+				if err != nil {
+					logrus.Warnf("get ClaimOpen failed: %s", err)
+					time.Sleep(waitTime)
+					continue
+				}
+				break
 			}
-			claimRoundOnchain, err := fisDropContract.ClaimRound(&callOpts)
-			if err != nil {
-				return err
+
+			//get claim round
+			retry = 0
+			var claimRoundOnchain *big.Int
+			for {
+				if retry > reTryLimit {
+					return fmt.Errorf("get ClaimRound  reach retry")
+				}
+				claimRoundOnchain, err = fisDropContract.ClaimRound(&callOpts)
+				if err != nil {
+					logrus.Warnf("get ClaimRound failed: %s", err)
+					time.Sleep(waitTime)
+					continue
+				}
+				break
 			}
 
 			//check gasprice
 			gasPriceMaxLimit := big.NewInt(cfg.MaxGasPrice * 1e9)
 			gasPrice, err := client.SuggestGasPrice(context.Background())
 			if err != nil {
-				gasPrice = nil
+				gasPrice = gasPriceMaxLimit
 			} else {
-				gasPrice = gasPrice.Add(gasPrice, big.NewInt(20e9))
+				gasPrice = gasPrice.Add(gasPrice, big.NewInt(10e9))
 			}
 			if gasPrice.Cmp(gasPriceMaxLimit) > 0 {
 				gasPrice = gasPriceMaxLimit
@@ -134,33 +197,44 @@ func _main() error {
 
 			// close claim
 			if claimOpen {
-				tx, err := fisDropContract.CloseClaim(txOpts)
-				if err != nil {
-					return err
+				//send close claim tx
+				retry = 0
+				var tx *types.Transaction
+				for {
+					if retry > reTryLimit {
+						return fmt.Errorf("send CloseClaim tx reach retry")
+					}
+					tx, err = fisDropContract.CloseClaim(txOpts)
+					if err != nil {
+						logrus.Warnf("send CloseClaim tx failed: %s", err)
+						time.Sleep(waitTime)
+						continue
+					}
+					break
 				}
 
 				//wait close claim tx onchain
-				retry := 0
+				retry = 0
 				for {
 					if retry > reTryLimit {
-						return fmt.Errorf("check ClaimClose tx  reach retry")
+						return fmt.Errorf("check ClaimClose tx onchain reach retry")
 					}
 					_, isPending, err := client.TransactionByHash(context.Background(), tx.Hash())
 					if err == nil && !isPending {
 						break
 					} else {
-						logrus.Warn("check CloseClaim tx failed ,watting...", " isPending ", isPending, " err ", err)
+						logrus.Warn("check CloseClaim tx onchain failed ,watting...", " isPending ", isPending, " err ", err)
 						time.Sleep(waitTime)
 						retry++
 						continue
 					}
 				}
 
-				//wati claim close
+				//wait claim close
 				retry = 0
 				for {
 					if retry > reTryLimit {
-						return fmt.Errorf("check ClaimClose tx  reach retry")
+						return fmt.Errorf("check ClaimOpen   reach retry")
 					}
 					open, err := fisDropContract.ClaimOpen(&callOpts)
 					if err == nil && !open {
@@ -191,10 +265,21 @@ func _main() error {
 			}
 
 			//send tx set root hash
-			tx, err := fisDropContract.SetMerkleRoot(txOpts, dateHash, common.HexToHash(willUseRootHash))
-			if err != nil {
-				return err
+			retry = 0
+			var tx *types.Transaction
+			for {
+				if retry > reTryLimit {
+					return fmt.Errorf("send SetMerkleRoot tx reach retry")
+				}
+				tx, err = fisDropContract.SetMerkleRoot(txOpts, dateHash, common.HexToHash(willUseRootHash))
+				if err != nil {
+					logrus.Warnf("send SetMerkleRoot tx failed: %s", err)
+					time.Sleep(waitTime)
+					continue
+				}
+				break
 			}
+
 			//wait root hash set tx onchain
 			retry = 0
 			for {
