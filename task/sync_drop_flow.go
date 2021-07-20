@@ -24,6 +24,12 @@ func SyncDropFlow(db *db.WrapDb, startDate, rethStatApi string) error {
 	yesterDay := utils.GetYesterdayUTC8Date()
 	dayInMeta := meta.DropFlowLatestDate
 
+	//only sync after 01:00 
+	newDaySeconds := utils.GetNewDayUtc8Seconds()
+	if newDaySeconds < 60*60 {
+		return nil
+	}
+
 	for dayInMeta < yesterDay {
 		requestDay, err := utils.AddOneDay(dayInMeta)
 		if err != nil {
