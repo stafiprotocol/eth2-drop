@@ -20,12 +20,10 @@ func TestGetNowUTC8Date(t *testing.T) {
 	timeParse,_:=time.Parse("20060102","20200714")
 	timeParse2,_:=time.Parse("20060102","20200714")
 	t.Log(timeParse2.Sub(timeParse).Hours()/24)
-	t.Log(utils.AddDay("20060102"))
 
 
 	t.Log("20210714" > "20200714")
 	t.Log("20200814" > "20200714")
 	t.Log("20200715" > "20200714")
-	t.Log("20200714" == "20200714")
 	t.Log(utils.GetNewDayUtc8Seconds())
 }

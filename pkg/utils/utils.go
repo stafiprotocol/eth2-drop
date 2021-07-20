@@ -61,7 +61,7 @@ func GetSwapHash(swapType, sender string, created int64) string {
 }
 
 func ToUpperList(list []string) []string {
-	for i, _ := range list {
+	for i := range list {
 		list[i] = strings.ToUpper(list[i])
 	}
 	return list

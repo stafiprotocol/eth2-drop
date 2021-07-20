@@ -22,7 +22,7 @@ func SafeGoWithRestart(x func()) {
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
-				fmt.Println(fmt.Sprintf("SafeGoWithRestart method hit panic: %s \nstack:%s", err, stack(3)))
+				fmt.Printf("SafeGoWithRestart method hit panic: %s \nstack:%s \n", err, stack(3))
 				time.Sleep(3 * time.Second)
 				SafeGoWithRestart(x)
 			}
@@ -35,7 +35,7 @@ func SafeGo(x func()) {
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
-				fmt.Println(fmt.Sprintf("SafeGoWithRestart method hit panic: %s \nstack:%s", err, stack(3)))
+				fmt.Printf("SafeGoWithRestart method hit panic: %s \nstack:%s \n", err, stack(3))
 			}
 		}()
 		x()

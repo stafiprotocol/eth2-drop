@@ -25,8 +25,7 @@ require (
 	github.com/swaggo/swag v1.7.0
 	github.com/tebeka/strftime v0.1.5 // indirect
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
-	github.com/urfave/cli v1.22.1 // indirect
-	github.com/urfave/cli/v2 v2.3.0 // indirect
+	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect
 	golang.org/x/text v0.3.5 // indirect
