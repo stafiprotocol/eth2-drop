@@ -16,7 +16,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func SyncDropFlow(db *db.WrapDb, dropRate, rethStatApi string) error {
+func SyncDropFlow(db *db.WrapDb, startDate, rethStatApi string) error {
 	meta, err := dao_user.GetMetaData(db)
 	if err != nil {
 		return err
@@ -61,6 +61,10 @@ func SyncDropFlow(db *db.WrapDb, dropRate, rethStatApi string) error {
 			return fmt.Errorf("requestDay:%s != repDate:%s", requestDay, rspREth.Data.Date)
 		}
 
+		dropRate, err := utils.GetDropRate(startDate, requestDay)
+		if err != nil {
+			return err
+		}
 		dropRateDecimal, err := decimal.NewFromString(dropRate)
 		if err != nil {
 			return fmt.Errorf("droprate:%s err :%s", dropRate, err)
@@ -103,7 +107,7 @@ func SyncDropFlow(db *db.WrapDb, dropRate, rethStatApi string) error {
 		}
 		err = tx.CommitTransaction()
 		if err != nil {
-			panic(fmt.Errorf("tx.CommitTransaction err: %s",err))
+			panic(fmt.Errorf("tx.CommitTransaction err: %s", err))
 		}
 
 	}

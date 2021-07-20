@@ -23,7 +23,6 @@ type Server struct {
 	ethApi        string
 	rEthStatApi   string
 	dropContract  string
-	dropRate      string
 	dropTime      int64
 	chainId       int64
 	syncStartDate string
@@ -37,7 +36,6 @@ func NewServer(cfg *config.Config, dao *db.WrapDb) (*Server, error) {
 		ethApi:        cfg.EthApi,
 		rEthStatApi:   cfg.REthStatApi,
 		dropContract:  cfg.DropContract,
-		dropRate:      cfg.DropRate,
 		dropTime:      cfg.DropTime,
 		syncStartDate: cfg.SyncStartDate,
 
@@ -72,10 +70,9 @@ func (svr *Server) ApiServer() {
 	logrus.Infof("Gin server done on %s", svr.listenAddr)
 }
 
-//check and init droprate and dropFlowLatestDate
+//check and init dropFlowLatestDate LedgerLatestDate
 func (svr *Server) InitOrUpdateMetaData() error {
 	meta, _ := dao_user.GetMetaData(svr.db)
-	meta.DropRate = svr.dropRate
 	if svr.syncStartDate > meta.DropFlowLatestDate {
 		newDay, err := utils.SubOneDay(svr.syncStartDate)
 		if err != nil {
@@ -91,7 +88,7 @@ func (svr *Server) InitOrUpdateMetaData() error {
 		}
 		meta.LedgerLatestDate = newDay
 	}
-
+	meta.SyncStartDate = svr.syncStartDate
 	return dao_user.UpOrInMetaData(svr.db, meta)
 }
 

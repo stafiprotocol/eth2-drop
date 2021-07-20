@@ -5,6 +5,7 @@ package utils
 
 import (
 	"encoding/hex"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -94,4 +95,34 @@ func SubOneDay(day string) (string, error) {
 		return "", err
 	}
 	return timeParse.AddDate(0, 0, -1).Format(dayLayout), nil
+}
+
+const DropRate10 = "10000000000000000000"
+const DropRate7 = "7000000000000000000"
+const DropRate4 = "4000000000000000000"
+
+func GetDropRate(startDayStr, nowDayStr string) (string, error) {
+	if startDayStr > nowDayStr {
+		return "", fmt.Errorf("startDay big than nowday")
+	}
+	startDay, err := time.Parse(dayLayout, startDayStr)
+	if err != nil {
+		return "", err
+	}
+	nowDay, err := time.Parse(dayLayout, nowDayStr)
+	if err != nil {
+		return "", err
+	}
+	interDays := nowDay.Sub(startDay).Milliseconds() / (24 * 60 * 60 * 1000)
+	switchDay := interDays%30 + 1
+
+	switch {
+	case switchDay >= 1 && switchDay <= 5:
+		return DropRate10, nil
+	case switchDay >= 6 && switchDay <= 20:
+		return DropRate7, nil
+	case switchDay >= 21 && switchDay <= 30:
+		return DropRate4, nil
+	}
+	return "", fmt.Errorf("switchDay err:%d", switchDay)
 }

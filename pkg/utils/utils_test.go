@@ -29,4 +29,10 @@ func TestGetNowUTC8Date(t *testing.T) {
 	t.Log("20200814" > "20200714")
 	t.Log("20200715" > "20200714")
 	t.Log(utils.GetNewDayUtc8Seconds())
+	t.Log(utils.GetDropRate("20200715","20200714"))
+	t.Log(utils.GetDropRate("20200715","20200715"))
+	t.Log(utils.GetDropRate("20200715","20200717"))
+	t.Log(utils.GetDropRate("20200715","20200720"))
+	t.Log(utils.GetDropRate("20200715","20200813"))
+	t.Log(utils.GetDropRate("20200715","20200814"))
 }

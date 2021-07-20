@@ -17,7 +17,7 @@ func (svr *Server) Task() {
 		select {
 		case <-ticker.C:
 			logrus.Info("SyncDropFlow start...")
-			err := task.SyncDropFlow(svr.db, svr.dropRate, svr.rEthStatApi)
+			err := task.SyncDropFlow(svr.db, svr.syncStartDate, svr.rEthStatApi)
 			if err != nil {
 				logrus.Error("SyncDropFlow err: ", err)
 			}

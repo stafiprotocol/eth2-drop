@@ -21,12 +21,18 @@ type RspDropRate struct {
 // @Success 200 {object} utils.Rsp{data=RspDropRate}
 // @Router /v1/drop_rate [get]
 func (h *Handler) HandleGetDropRate(c *gin.Context) {
+	nowDate := utils.GetNowUTC8Date()
 	meta, err := dao_user.GetMetaData(h.db)
 	if err != nil {
 		utils.Err(c, err.Error())
 		return
 	}
+	dropRate, err := utils.GetDropRate(meta.SyncStartDate, nowDate)
+	if err != nil {
+		utils.Err(c, err.Error())
+		return
+	}
 	utils.Ok(c, "success", RspDropRate{
-		DropRate: meta.DropRate,
+		DropRate: dropRate,
 	})
 }
