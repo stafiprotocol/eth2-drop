@@ -1,3 +1,6 @@
+// Copyright 2021 stafiprotocol
+// SPDX-License-Identifier: LGPL-3.0-only
+
 package dao_user
 
 import "drop/pkg/db"

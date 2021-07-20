@@ -15,7 +15,7 @@ build:
 license:
 	@echo "  >  \033[32mAdding license headers...\033[0m "
 	go get -u github.com/google/addlicense
-	addlicense -c "stafi" -f ./header.txt -y 2021 .
+	addlicense -c "stafiprotocol" -f ./header.txt -y 2021 .
 
 swagger:
 	@echo "  >  \033[32mBuilding swagger docs...\033[0m "
