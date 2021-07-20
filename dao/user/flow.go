@@ -3,7 +3,11 @@
 
 package dao_user
 
-import "drop/pkg/db"
+import (
+	"drop/pkg/db"
+
+	"gorm.io/gorm"
+)
 
 // flow drop info
 type DropFlow struct {
@@ -21,5 +25,15 @@ func UpOrInDropFlow(db *db.WrapDb, c *DropFlow) error {
 
 func GetDropFlowListByDate(db *db.WrapDb, date string) (cmp []*DropFlow, err error) {
 	err = db.Find(&cmp, "deposit_date = ?", date).Error
+	return
+}
+
+func GetDropFlowByUserDate(db *db.WrapDb, user, date string) (banker *DropFlow, err error) {
+	banker = &DropFlow{}
+	err = db.Take(banker, "user_address = ? and deposit_date = ?", user, date).Error
+	if err == gorm.ErrRecordNotFound {
+		banker.REthAmount = "0"
+		banker.DropAmount = "0"
+	}
 	return
 }

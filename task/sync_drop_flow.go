@@ -24,7 +24,7 @@ func SyncDropFlow(db *db.WrapDb, startDate, rethStatApi string) error {
 	yesterDay := utils.GetYesterdayUTC8Date()
 	dayInMeta := meta.DropFlowLatestDate
 
-	//only sync after 01:00 
+	//only sync after 01:00
 	newDaySeconds := utils.GetNewDayUtc8Seconds()
 	if newDaySeconds < 60*60 {
 		return nil
@@ -88,18 +88,32 @@ func SyncDropFlow(db *db.WrapDb, startDate, rethStatApi string) error {
 				tx.RollbackTransaction()
 				panic(fmt.Errorf("reth amount not right: %s", l.Amount))
 			}
-
 			dropAmountDecimal := rethAmountDecimal.Mul(dropRateDecimal).Div(decimal.New(1, 18))
-			dropAmountStr := dropAmountDecimal.StringFixed(0)
 
-			dropFlow := dao_user.DropFlow{
-				UserAddress: l.Address,
-				REthAmount:  l.Amount,
-				DropRate:    dropRate,
-				DropAmount:  dropAmountStr,
-				DepositDate: requestDay,
+			//get drop from db
+			dropFlow, _ := dao_user.GetDropFlowByUserDate(tx, l.Address, requestDay)
+			oldRethAmountDecimal, err := decimal.NewFromString(dropFlow.REthAmount)
+			if err != nil {
+				tx.RollbackTransaction()
+				panic(fmt.Errorf("old reth amount not right: %s", dropFlow.REthAmount))
 			}
-			err = dao_user.UpOrInDropFlow(tx, &dropFlow)
+			oldDropAmountDecimal, err := decimal.NewFromString(dropFlow.DropAmount)
+			if err != nil {
+				tx.RollbackTransaction()
+				panic(fmt.Errorf("old drop amount not right: %s", dropFlow.DropAmount))
+			}
+
+			newRethAmountStr := rethAmountDecimal.Add(oldRethAmountDecimal).StringFixed(0)
+			newDropAmountStr := dropAmountDecimal.Add(oldDropAmountDecimal).StringFixed(0)
+			//update amount
+			dropFlow.REthAmount = newRethAmountStr
+			dropFlow.DropAmount = newDropAmountStr
+			//update data
+			dropFlow.UserAddress = l.Address
+			dropFlow.DropRate = dropRate
+			dropFlow.DepositDate = requestDay
+
+			err = dao_user.UpOrInDropFlow(tx, dropFlow)
 			if err != nil {
 				tx.RollbackTransaction()
 				return fmt.Errorf("UpOrInDropFlow dropflow: %+v  err: %s", dropFlow, err)
