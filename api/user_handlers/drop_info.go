@@ -19,8 +19,10 @@ type DropInfo struct {
 }
 
 type RspDropInfo struct {
-	DropInfo DropInfo `json:"drop_info"`
-	DropList []Drop   `json:"drop_list"`
+	DropIsOpen bool     `json:"drop_is_open"`
+	DropInfo   DropInfo `json:"drop_info"`
+	DropList   []Drop   `json:"drop_list"`
+	TxList     []string `json:"tx_list"`
 }
 
 // @Summary get user drop info
@@ -70,6 +72,16 @@ func (h *Handler) HandleGetDropInfo(c *gin.Context) {
 		})
 	}
 	rsp.DropList = dropList
+	rsp.TxList = make([]string, 0)
+	txList, err := dao_user.GetDropFlowListByUser(h.db, userAddress)
+	if err != nil {
+		utils.Err(c, err.Error())
+		return
+	}
+	for _, tx := range txList {
+		rsp.TxList = append(rsp.TxList, tx.Txhash)
+	}
 
+	rsp.DropIsOpen = true
 	utils.Ok(c, "success", rsp)
 }

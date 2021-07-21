@@ -67,18 +67,21 @@ func SyncDropFlow(db *db.WrapDb, startDate, rethStatApi string) error {
 			return fmt.Errorf("requestDay:%s != repDate:%s", requestDay, rspREth.Data.Date)
 		}
 
-		dropRate, err := utils.GetDropRate(startDate, requestDay)
-		if err != nil {
-			return err
-		}
-		dropRateDecimal, err := decimal.NewFromString(dropRate)
-		if err != nil {
-			return fmt.Errorf("droprate:%s err :%s", dropRate, err)
-		}
-
 		//transaction start
 		tx := db.NewTransaction()
 		for _, l := range rspREth.Data.List {
+			//get droprate
+			dropRate, err := utils.GetDropRateFromTimestamp(startDate, l.Timestamp)
+			if err != nil {
+				tx.RollbackTransaction()
+				panic(err)
+			}
+			dropRateDecimal, err := decimal.NewFromString(dropRate)
+			if err != nil {
+				tx.RollbackTransaction()
+				panic(fmt.Errorf("droprate:%s err :%s", dropRate, err))
+			}
+
 			if !common.IsHexAddress(l.Address) {
 				tx.RollbackTransaction()
 				panic(fmt.Errorf("not common eth address: %s", l.Address))
@@ -91,27 +94,16 @@ func SyncDropFlow(db *db.WrapDb, startDate, rethStatApi string) error {
 			dropAmountDecimal := rethAmountDecimal.Mul(dropRateDecimal).Div(decimal.New(1, 18))
 
 			//get drop from db
-			dropFlow, _ := dao_user.GetDropFlowByUserDate(tx, l.Address, requestDay)
-			oldRethAmountDecimal, err := decimal.NewFromString(dropFlow.REthAmount)
-			if err != nil {
-				tx.RollbackTransaction()
-				panic(fmt.Errorf("old reth amount not right: %s", dropFlow.REthAmount))
-			}
-			oldDropAmountDecimal, err := decimal.NewFromString(dropFlow.DropAmount)
-			if err != nil {
-				tx.RollbackTransaction()
-				panic(fmt.Errorf("old drop amount not right: %s", dropFlow.DropAmount))
-			}
-
-			newRethAmountStr := rethAmountDecimal.Add(oldRethAmountDecimal).StringFixed(0)
-			newDropAmountStr := dropAmountDecimal.Add(oldDropAmountDecimal).StringFixed(0)
+			dropFlow, _ := dao_user.GetDropFlowByUserTx(tx, l.Address, l.Hash)
 			//update amount
-			dropFlow.REthAmount = newRethAmountStr
-			dropFlow.DropAmount = newDropAmountStr
+			dropFlow.REthAmount = rethAmountDecimal.StringFixed(0)
+			dropFlow.DropAmount = dropAmountDecimal.StringFixed(0)
 			//update data
 			dropFlow.UserAddress = l.Address
 			dropFlow.DropRate = dropRate
 			dropFlow.DepositDate = requestDay
+			dropFlow.TxTimestamp = l.Timestamp
+			dropFlow.Txhash = l.Hash
 
 			err = dao_user.UpOrInDropFlow(tx, dropFlow)
 			if err != nil {
@@ -140,8 +132,10 @@ type RspREth struct {
 	Message string `json:"message"`
 	Data    struct {
 		List []struct {
-			Address string `json:"address"`
-			Amount  string `json:"amount"`
+			Address   string `json:"address"`
+			Amount    string `json:"amount"`
+			Timestamp string `json:"operateTime"`
+			Hash      string `json:"hash"`
 		} `json:"list"`
 		Date string `json:"date"`
 	} `json:"data"`

@@ -101,6 +101,15 @@ const DropRate10 = "10000000000000000000"
 const DropRate7 = "7000000000000000000"
 const DropRate4 = "4000000000000000000"
 
+func GetDropRateFromTimestamp(startDay, stamp string) (string, error) {
+	stampSec, err := strconv.Atoi(stamp)
+	if err != nil {
+		return "", err
+	}
+	stampDate := time.Unix(int64(stampSec), 0).In(location).Format(dayLayout)
+	return GetDropRate(startDay, stampDate)
+}
+
 func GetDropRate(startDayStr, nowDayStr string) (string, error) {
 	if startDayStr > nowDayStr {
 		return "", fmt.Errorf("startDay big than nowday")
