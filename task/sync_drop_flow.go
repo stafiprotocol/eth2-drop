@@ -82,15 +82,23 @@ func SyncDropFlow(db *db.WrapDb, startDate, rethStatApi string) error {
 				panic(fmt.Errorf("droprate:%s err :%s", dropRate, err))
 			}
 
+			//check address
 			if !common.IsHexAddress(l.Address) {
 				tx.RollbackTransaction()
 				panic(fmt.Errorf("not common eth address: %s", l.Address))
 			}
+			//check tx hash
+			if len(l.Hash) != 66 {
+				tx.RollbackTransaction()
+				panic(fmt.Errorf("tx hash len no right: address %s ,hash: %s", l.Address, l.Hash))
+			}
+			//checkout eth amount
 			rethAmountDecimal, err := decimal.NewFromString(l.Amount)
 			if err != nil {
 				tx.RollbackTransaction()
 				panic(fmt.Errorf("reth amount not right: %s", l.Amount))
 			}
+			//call drop amount
 			dropAmountDecimal := rethAmountDecimal.Mul(dropRateDecimal).Div(decimal.New(1, 18))
 
 			//get drop from db
