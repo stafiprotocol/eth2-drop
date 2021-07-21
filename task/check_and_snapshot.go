@@ -48,6 +48,10 @@ func CheckAndSnapshot(db *db.WrapDb, ethApi, fisDropContractAddress string) erro
 	if err != nil {
 		return err
 	}
+	//skip if drop not open
+	if meta.DropIsOpen == 0 {
+		return nil
+	}
 	roundOnchain, err := fisDropContract.ClaimRound(&callOpts)
 	if err != nil {
 		return err
