@@ -5,6 +5,7 @@ ethapi = "https://ropsten.infura.io/v3/"
 rethstatapi = "https://rtoken-api.stafi.io/stafi/v1/webapi/reth/stakestat"
 dropcontract = "0xD55CF61f31E9407Ed5a31836E1E5ea26db7Bc17b"
 syncstartdate = "20210716"
+dropisopen = true
 
 mode = "release" # debug or release
 

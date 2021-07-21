@@ -26,6 +26,7 @@ type Server struct {
 	dropTime      int64
 	chainId       int64
 	syncStartDate string
+	dropIsOpen    bool
 	db            *db.WrapDb
 }
 
@@ -38,6 +39,7 @@ func NewServer(cfg *config.Config, dao *db.WrapDb) (*Server, error) {
 		dropContract:  cfg.DropContract,
 		dropTime:      cfg.DropTime,
 		syncStartDate: cfg.SyncStartDate,
+		dropIsOpen:    cfg.DropIsOpen,
 
 		chainId: cfg.ChainId,
 		db:      dao,
@@ -89,6 +91,11 @@ func (svr *Server) InitOrUpdateMetaData() error {
 		meta.LedgerLatestDate = newDay
 	}
 	meta.SyncStartDate = svr.syncStartDate
+	if svr.dropIsOpen {
+		meta.DropIsOpen = 1
+	} else {
+		meta.DropIsOpen = 0
+	}
 	return dao_user.UpOrInMetaData(svr.db, meta)
 }
 

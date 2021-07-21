@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type DropInfo struct {
@@ -19,10 +20,10 @@ type DropInfo struct {
 }
 
 type RspDropInfo struct {
-	DropIsOpen bool     `json:"drop_is_open"`
-	DropInfo   DropInfo `json:"drop_info"`
-	DropList   []Drop   `json:"drop_list"`
-	TxList     []string `json:"tx_list"`
+	DropIsOpen bool        `json:"drop_is_open"`
+	DropInfo   interface{} `json:"drop_info"`
+	DropList   []Drop      `json:"drop_list"`
+	TxList     []string    `json:"tx_list"`
 }
 
 // @Summary get user drop info
@@ -38,22 +39,30 @@ func (h *Handler) HandleGetDropInfo(c *gin.Context) {
 		utils.Err(c, "param err")
 		return
 	}
+	//get drop info
 	userInfo, err := dao_user.GetDropLedgerByUser(h.db, userAddress)
-	if err != nil {
+	if err != nil && err != gorm.ErrRecordNotFound {
 		utils.Err(c, err.Error())
 		return
 	}
-	rsp := RspDropInfo{
-		DropInfo: DropInfo{
+	var dropInfo interface{} = struct{}{}
+	if err != nil && err == gorm.ErrRecordNotFound {
+		dropInfo = struct{}{}
+	}
+	if err == nil {
+		dropInfo = DropInfo{
 			UserAddress:       userAddress,
 			TotalDropAmount:   userInfo.TotalDropAmount,
 			TotalREthAmount:   userInfo.TotalREthAmount,
 			ClaimedDropAmount: userInfo.TotalClaimedDropAmount,
-		},
+		}
+	}
+	rsp := RspDropInfo{
+		DropInfo: dropInfo,
 	}
 
+	//get drop list
 	dropList := make([]Drop, 0)
-
 	lastRound, err := dao_user.GetSnapshotLastRound(h.db)
 	if err != nil {
 		utils.Err(c, err.Error())
@@ -64,7 +73,6 @@ func (h *Handler) HandleGetDropInfo(c *gin.Context) {
 		utils.Err(c, err.Error())
 		return
 	}
-
 	for _, l := range list {
 		dropList = append(dropList, Drop{
 			UserAddress: l.UserAddress,
@@ -72,6 +80,8 @@ func (h *Handler) HandleGetDropInfo(c *gin.Context) {
 		})
 	}
 	rsp.DropList = dropList
+
+	//get txlist
 	rsp.TxList = make([]string, 0)
 	txList, err := dao_user.GetDropFlowListByUser(h.db, userAddress)
 	if err != nil {
@@ -82,6 +92,11 @@ func (h *Handler) HandleGetDropInfo(c *gin.Context) {
 		rsp.TxList = append(rsp.TxList, tx.Txhash)
 	}
 
-	rsp.DropIsOpen = true
+	meta, err := dao_user.GetMetaData(h.db)
+	if err != nil {
+		utils.Err(c, err.Error())
+		return
+	}
+	rsp.DropIsOpen = meta.DropIsOpen == 1
 	utils.Ok(c, "success", rsp)
 }

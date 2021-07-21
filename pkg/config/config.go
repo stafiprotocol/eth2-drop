@@ -19,10 +19,11 @@ type Config struct {
 	MaxGasPrice   int64 //Gwei
 	ChainId       int64
 	DropContract  string
-	DropTime      int64  //seconds from utc+8 00:00
+	DropTime      int64 //seconds from utc+8 00:00
 	SyncStartDate string
 	From          string
 	KeystorePath  string
+	DropIsOpen    bool
 
 	ListenAddr  string
 	Mode        string //release debug test
