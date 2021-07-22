@@ -57,6 +57,7 @@ func _main() error {
 
 	ticker := time.NewTicker(time.Duration(cfg.TaskTicker) * time.Second)
 	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ticker.C:
