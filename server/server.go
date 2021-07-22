@@ -9,6 +9,7 @@ import (
 	"drop/pkg/config"
 	"drop/pkg/db"
 	"drop/pkg/utils"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -74,6 +75,9 @@ func (svr *Server) ApiServer() {
 
 //check and init dropFlowLatestDate LedgerLatestDate
 func (svr *Server) InitOrUpdateMetaData() error {
+	if len(svr.syncStartDate) != 8 {
+		return fmt.Errorf("syncStartDate format err")
+	}
 	meta, _ := dao_user.GetMetaData(svr.db)
 	if svr.syncStartDate > meta.DropFlowLatestDate {
 		newDay, err := utils.SubOneDay(svr.syncStartDate)

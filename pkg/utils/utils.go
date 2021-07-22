@@ -112,7 +112,7 @@ func GetDropRateFromTimestamp(startDay, stamp string) (string, error) {
 
 func GetDropRate(startDayStr, nowDayStr string) (string, error) {
 	if startDayStr > nowDayStr {
-		return "", fmt.Errorf("startDay big than nowday")
+		return "0", nil
 	}
 	startDay, err := time.Parse(dayLayout, startDayStr)
 	if err != nil {

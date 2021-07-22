@@ -141,6 +141,11 @@ func CheckAndSnapshot(db *db.WrapDb, ethApi, fisDropContractAddress string) erro
 			newDropAmount = totalDropAmountDeci.Sub(totalClaimedDropAmountDeci)
 		}
 
+		//skip no drop amount is zero
+		if newDropAmount.Equal(decimal.NewFromInt(0)) {
+			continue
+		}
+
 		snapShot := dao_user.Snapshot{
 			UserAddress: l.UserAddress,
 			Round:       lastRound + 1,
