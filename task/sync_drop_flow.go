@@ -14,12 +14,17 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/shopspring/decimal"
+	"github.com/sirupsen/logrus"
 )
 
 func SyncDropFlow(db *db.WrapDb, startDate, rethStatApi string) error {
 	meta, err := dao_user.GetMetaData(db)
 	if err != nil {
 		return err
+	}
+	if meta.DropIsOpen == 0 {
+		logrus.Info("drop not open yet")
+		return nil
 	}
 	yesterDay := utils.GetYesterdayUTC8Date()
 	dayInMeta := meta.DropFlowLatestDate
