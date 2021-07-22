@@ -28,6 +28,13 @@ func (h *Handler) HandleGetDropRate(c *gin.Context) {
 		utils.Err(c, err.Error())
 		return
 	}
+	//return 0 if not open yet
+	if meta.DropIsOpen == 0 {
+		utils.Ok(c, "success", RspDropRate{
+			DropRate: "0",
+		})
+		return
+	}
 
 	if len(timeStamp) > 0 {
 		rate, err := utils.GetDropRateFromTimestamp(meta.SyncStartDate, timeStamp)
