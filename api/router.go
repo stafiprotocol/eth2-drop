@@ -27,6 +27,7 @@ func InitRouters(db *db.WrapDb) http.Handler {
 	router.GET("api/v1/drop_info", userHandler.HandleGetDropInfo)
 	router.GET("api/v1/root_hash", userHandler.HandleGetRootHash)
 	router.GET("api/v1/drop_flow_latest", userHandler.HandleGetDropFlow)
+	router.GET("api/v1/skip_date", userHandler.HandleGetSkipDate)
 
 	return router
 }

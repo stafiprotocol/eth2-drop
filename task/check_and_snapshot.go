@@ -8,6 +8,7 @@ import (
 	"drop/contract/fis_drop"
 	dao_user "drop/dao/user"
 	"drop/pkg/db"
+	"drop/pkg/utils"
 	"fmt"
 	"math/big"
 	"time"
@@ -87,7 +88,7 @@ func CheckAndSnapshot(db *db.WrapDb, ethApi, fisDropContractAddress string) erro
 			dropLedger, err := dao_user.GetDropLedgerByUser(tx, l.UserAddress)
 			if err != nil {
 				tx.RollbackTransaction()
-				return fmt.Errorf("GetDropLedgerByUser err: %s",err.Error())
+				return fmt.Errorf("GetDropLedgerByUser err: %s", err.Error())
 			}
 			oldTotalClaimed, err := decimal.NewFromString(dropLedger.TotalClaimedDropAmount)
 			if err != nil {
@@ -124,6 +125,8 @@ func CheckAndSnapshot(db *db.WrapDb, ethApi, fisDropContractAddress string) erro
 		tx.RollbackTransaction()
 		return err
 	}
+
+	hashSnapshotThisRound := false
 	for _, l := range dropLedgerList {
 		totalClaimedDropAmountDeci, err := decimal.NewFromString(l.TotalClaimedDropAmount)
 		if err != nil {
@@ -141,7 +144,7 @@ func CheckAndSnapshot(db *db.WrapDb, ethApi, fisDropContractAddress string) erro
 			newDropAmount = totalDropAmountDeci.Sub(totalClaimedDropAmountDeci)
 		}
 
-		//skip no drop amount is zero
+		//skip if drop amount is zero
 		if newDropAmount.Equal(decimal.NewFromInt(0)) {
 			continue
 		}
@@ -152,6 +155,7 @@ func CheckAndSnapshot(db *db.WrapDb, ethApi, fisDropContractAddress string) erro
 			DropAmount:  newDropAmount.StringFixed(0),
 			Claimed:     0,
 		}
+		hashSnapshotThisRound = true
 		err = dao_user.UpOrInSnapshot(tx, &snapShot)
 		if err != nil {
 			tx.RollbackTransaction()
@@ -159,8 +163,15 @@ func CheckAndSnapshot(db *db.WrapDb, ethApi, fisDropContractAddress string) erro
 		}
 	}
 
+	if !hashSnapshotThisRound {
+		//if has no snapshot, skip root hash today
+		meta.RootHashSkipDate = utils.GetNowUTC8Date()
+	} else {
+		//new round flag
+		meta.LatestClaimRound = lastRound + 1
+	}
+
 	//update meta data
-	meta.LatestClaimRound = lastRound + 1
 	err = dao_user.UpOrInMetaData(tx, meta)
 	if err != nil {
 		tx.RollbackTransaction()

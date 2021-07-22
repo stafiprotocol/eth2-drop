@@ -15,7 +15,7 @@ type RspDropFlow struct {
 }
 
 // @Summary get drop flow
-// @Description get drop flow
+// @Description get drop flow latest date, will not close claim to set roothash when no dropflow yesterday
 // @Tags v1
 // @Produce json
 // @Success 200 {object} utils.Rsp{data=RspDropFlow}

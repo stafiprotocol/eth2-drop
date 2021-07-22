@@ -20,7 +20,8 @@ func TestGetSwapHash(t *testing.T) {
 func TestGetNowUTC8Date(t *testing.T) {
 	t.Log(utils.GetNowUTC8Date())
 	t.Log(utils.GetYesterdayUTC8Date())
-	timeParse,_:=time.Parse("20060102","20200714")
+	timeParse,_:=time.Parse("20060102","0")
+	t.Log(timeParse.String())
 	timeParse2,_:=time.Parse("20060102","20200714")
 	t.Log(timeParse2.Sub(timeParse).Hours()/24)
 
