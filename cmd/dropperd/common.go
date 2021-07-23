@@ -453,3 +453,12 @@ func sendOpenClaimTxAndWait(client *ethclient.Client, fisDropContract *contract_
 		}
 	}
 }
+
+func stillNeedNext(fisDropContract *contract_fis_drop.FisDropREth, dateHash [32]byte, ledgerApi string) bool {
+	dateHasDrop := waitDateHashDrop(fisDropContract, dateHash)
+	skipDate := waitToGetSkipDate(ledgerApi)
+	if !dateHasDrop && skipDate != utils.GetNowUTC8Date() {
+		return true
+	}
+	return false
+}

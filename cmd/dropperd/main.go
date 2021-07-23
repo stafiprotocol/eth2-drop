@@ -66,7 +66,6 @@ func _main() error {
 			if newDaySeconds < cfg.DropTime {
 				continue
 			}
-
 			//dial client
 			client := waitClient(cfg.EthApi)
 
@@ -92,12 +91,6 @@ func _main() error {
 				continue
 			}
 
-			//get claim open state
-			claimOpen := waitToGetClaimOpen(fisDropContract)
-
-			//get claim round
-			claimRoundOnchain := waitToGetClaimRound(fisDropContract)
-
 			//check gasprice
 			gasPriceMaxLimit := big.NewInt(cfg.MaxGasPrice * 1e9)
 			gasPrice, err := client.SuggestGasPrice(context.Background())
@@ -121,14 +114,23 @@ func _main() error {
 				Context:  context.Background(),
 			}
 
+			//get claim open state
+			claimOpen := waitToGetClaimOpen(fisDropContract)
 			// close claim
 			if claimOpen {
+				//check need again
+				if !stillNeedNext(fisDropContract, dateHash, cfg.LedgerApi) {
+					continue
+				}
 				//send close claim tx
 				sendCloseClaimTxAndWait(client, fisDropContract, txOpts)
 				//wait until claim close
 				waitUntilClaimClose(fisDropContract)
 			}
+			time.Sleep(20 * time.Second)
 
+			//get claim round
+			claimRoundOnchain := waitToGetClaimRound(fisDropContract)
 			//get root hash of new round
 			willUseRootHash, shouldSkipToday := waitToGetRootHash(cfg.LedgerApi, claimRoundOnchain.Int64()+1)
 			if shouldSkipToday {
