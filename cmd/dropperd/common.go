@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -273,6 +274,11 @@ func sendCloseClaimTxAndWait(client *ethclient.Client, fisDropContract *contract
 		tx, err = fisDropContract.CloseClaim(txOpts)
 		if err != nil {
 			logrus.Warnf("send CloseClaim tx failed: %s", err)
+			//return if executed or voted
+			if strings.Contains(err.Error(), "proposal already executed/cancelled") ||
+				strings.Contains(err.Error(), "relayer already voted") {
+				return
+			}
 			time.Sleep(waitTime)
 			continue
 		}
@@ -377,6 +383,12 @@ func sendSetRootHashTxAndWait(client *ethclient.Client, fisDropContract *contrac
 		tx, err = fisDropContract.SetMerkleRoot(txOpts, dateHash, _merkleRoot)
 		if err != nil {
 			logrus.Warnf("send SetMerkleRoot tx failed: %s", err)
+			//return if executed or voted
+			if strings.Contains(err.Error(), "proposal already executed/cancelled") ||
+				strings.Contains(err.Error(), "relayer already voted") ||
+				strings.Contains(err.Error(), "this date has drop") {
+				return
+			}
 			time.Sleep(waitTime)
 			continue
 		}
@@ -413,6 +425,11 @@ func sendOpenClaimTxAndWait(client *ethclient.Client, fisDropContract *contract_
 		tx, err = fisDropContract.OpenClaim(txOpts)
 		if err != nil {
 			logrus.Warnf("send OpenClaim tx failed: %s", err)
+			//return if executed or voted
+			if strings.Contains(err.Error(), "proposal already executed/cancelled") ||
+				strings.Contains(err.Error(), "relayer already voted") {
+				return
+			}
 			time.Sleep(waitTime)
 			continue
 		}
