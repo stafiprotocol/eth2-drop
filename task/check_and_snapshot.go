@@ -35,7 +35,7 @@ func CheckAndSnapshot(db *db.WrapDb, ethApi, fisDropContractAddress string) erro
 		BlockNumber: nil,
 		Context:     context.Background(),
 	}
-	//snapshot when claim close && roundOnchain==round in snapshot
+	//snapshot when claim close && roundOnchain==round in snapshot && dropidopen && skipdate != today
 	isClaimOpen, err := fisDropContract.ClaimOpen(&callOpts)
 	if err != nil {
 		return err
@@ -61,7 +61,11 @@ func CheckAndSnapshot(db *db.WrapDb, ethApi, fisDropContractAddress string) erro
 	if roundOnchain.Int64() != meta.LatestClaimRound {
 		return fmt.Errorf("round onchain != meta.latestClaimRound")
 	}
-	//sync claim data
+
+	if meta.RootHashSkipDate == utils.GetNowUTC8Date() {
+		return fmt.Errorf("skipDate == today, no need snapshot")
+	}
+
 	lastRound, err := dao_user.GetSnapshotLastRound(db)
 	if err != nil {
 		return err
@@ -73,6 +77,8 @@ func CheckAndSnapshot(db *db.WrapDb, ethApi, fisDropContractAddress string) erro
 
 	//transaction start
 	tx := db.NewTransaction()
+
+	//sync drop contract claim data
 	for i, l := range list {
 		time.Sleep(time.Millisecond * 200)
 		//skip if has claimed
@@ -170,7 +176,6 @@ func CheckAndSnapshot(db *db.WrapDb, ethApi, fisDropContractAddress string) erro
 		//new round flag
 		meta.LatestClaimRound = lastRound + 1
 	}
-
 	//update meta data
 	err = dao_user.UpOrInMetaData(tx, meta)
 	if err != nil {
